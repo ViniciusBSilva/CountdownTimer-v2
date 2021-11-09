@@ -1,6 +1,7 @@
 /* tag BODY*/
 body {
     font-family: sans-serif;
+    background-color: lightsteelblue;
 }
 
 /* classe configForm */
@@ -11,3 +12,31 @@ body {
 input[type=datetime-local], input[type=time] {
     padding: 0.3em;
 }
+
+.counterOutput {
+    font-family: 'Zen Dots', cursive;
+    font-size: 2em;;
+}
+
+section {
+    margin: auto;
+    margin-top: 10%;
+    margin-bottom: 10%;
+    width: 70%;
+    border-radius: 0.3em;
+    border: 1px solid black;
+    padding: 1em;
+    background-color: gainsboro;
+}
+
+button {
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 0.3em;
+}
+
+header{
+    text-align: center;
+    font-size: 1.5em;
+}
+

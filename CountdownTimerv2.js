@@ -1,17 +1,31 @@
+var interval = null;
+
+const dayInMs = 1000 * 60 * 60 * 24;
+const hourInMs = 1000 * 60 * 60;
+const minuteInMs = 1000 * 60;
+const secondInMs = 1000;
+
 // Radiobuttons Event
 let radioSelTypes = document.selTypesForm.selTypes;
-console.log(radioSelTypes);
 let prev = null;
 
 for (let i = 0; i < radioSelTypes.length; i++) {
 
     radioSelTypes[i].onclick = function () {
 
+        stopCountdown();
+
         document.getElementById("configTimer").innerHTML = showConfigBlock(this.value);
         document.getElementById("timer").innerHTML = "";
 
     };
 
+}
+
+function toJSONLocal(date) {
+    var local = new Date(date);
+    local.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return local.toJSON();
 }
 
 function showConfigBlock(selType) {
@@ -24,9 +38,13 @@ function showConfigBlock(selType) {
     switch (selType) {
 
         case "dateTime":
+            let defaultDate = new Date();
+            let defaultDateStringSplit = toJSONLocal(defaultDate).split('.');
             content +=
                 "<form name='dateTimeForm'>" +
-                "<p><label>Date/Time <input id='inputDateTime' type='datetime-local' step='1'></label></p>" +
+                "<p><label>Date/Time <input id='inputDateTime' type='datetime-local' step='1' value='" +
+                defaultDateStringSplit[0] +
+                "'></label></p>" +
                 "<p><button class='button' type='button' onclick='showDateTimeTimer()'>Start</button></p>" +
                 "</form>";
             break;
@@ -34,7 +52,7 @@ function showConfigBlock(selType) {
         case "amount":
             content +=
                 "<form name='amountForm'>" +
-                "<p><label>Time <input id='inputAmount' type='time' step='1'></label></p>" +
+                "<p><label>Time <input id='inputAmount' type='time' step='1' value='00:00:00'></label></p>" +
                 "<p><button class='button' type='button' onclick='showAmountTimer()'>Start</button></p>" +
                 "</form>";
             break;
@@ -48,13 +66,6 @@ function showConfigBlock(selType) {
     return content;
 
 }
-
-var interval = null;
-
-const dayInMs = 1000 * 60 * 60 * 24;
-const hourInMs = 1000 * 60 * 60;
-const minuteInMs = 1000 * 60;
-const secondInMs = 1000;
 
 function timeToDays(time) {
     return Math.floor(time / dayInMs);
@@ -77,15 +88,12 @@ function secondsToMilliseconds(seconds) {
 }
 
 
-function getDistance(targetTime) {
+function getDistance(startDate, targetDate) {
 
-    let currentTime = new Date().getTime();
-    let distance = targetTime.getTime - currentTime;
-    ///////////////////////////////////////////
-    console.log(currentTime);                       ///////////////////////////////////////////
-    console.log(targetTime.getTime);                        ///////////////////////////////////////////
-    console.log(distance);                          ///////////////////////////////////////////
-    ///////////////////////////////////////////
+    let startTime = startDate.getTime();
+    let targetTime = targetDate.getTime();
+    let distance = targetTime - startTime;
+
     return distance;
 
 }
@@ -116,11 +124,11 @@ function getAmountCounter(distance) {
 
 }
 
-function addCounter(tagId, funcOutput, targetTime) {
+function addCounter(tagId, startDate, funcOutput, targetTime) {
+
+    let distance = getDistance(startDate, targetTime);
 
     interval = setInterval(function () {
-
-        let distance = getDistance(targetTime);
 
         if (distance < 0) {
             clearInterval(interval);
@@ -129,31 +137,41 @@ function addCounter(tagId, funcOutput, targetTime) {
             document.getElementById(tagId).innerHTML = funcOutput(distance);
         }
 
+        distance = getDistance(new Date(), targetTime);
+
     }, 1000);
 
 }
 
 
 
-function showTimerBlock(timerType) {
+function showTimerBlock(timerType, currentDate, inputValue) {
 
     let content = "";
 
     content = "<p><strong>Timer</strong></p>" +
         "<p class='timer'>";
 
+    let initialDistance, initialOutput;
+
     switch (timerType) {
         case "dateTime":
-            content += "<p id='dateTimeCounterOutput' class='counterOutput'>dateTime</p>";
+            initialDistance = getDistance(currentDate, inputValue)
+            initialDistance += 1000;
+            initialOutput = getDateTimeCounter(initialDistance)
+            content += "<p id='dateTimeCounterOutput' class='counterOutput'>" + initialOutput + "</p>";
             content += "<p><button class='button' type='button' onclick='stopCountdown()'>Stop</button></p>";
 
             break;
 
         case "amount":
-            content += "<p id='amountCounterOutput' class='counterOutput'>amount</p>";
-            content += "<p><button class='button' type='button' onclick='startCountdown()'>Start</button> " +
+            initialDistance = getDistance(currentDate, inputValue)
+            initialDistance += 1000;
+            initialOutput = getAmountCounter(initialDistance)
+            content += "<p id='amountCounterOutput' class='counterOutput'>" + initialOutput + "</p>";
+            content += "<p><button class='button' type='button' onclick='startAmountCountdown()'>Start</button> " +
                 "<button class='button' type='button' onclick='stopCountdown()'>Stop</button> " +
-                "<button class='button' type='button' onclick='resetCountdown()'>Reset</button></p>";
+                "<button class='button' type='button' onclick='resetAmountCountdown()'>Reset</button></p>";
             break;
 
         default:
@@ -166,36 +184,67 @@ function showTimerBlock(timerType) {
 
 }
 
+function hadleDTtargetTime(targetTime) {
+    return new Date(targetTime);
+}
+
 function showDateTimeTimer() {
-    document.getElementById("timer").innerHTML = showTimerBlock("dateTime");
+
+    stopCountdown();
 
     let targetTime = document.getElementById("inputDateTime").value;
-    ///////////////////////////////////////////
-    console.log(targetTime);                          ///////////////////////////////////////////
-    ///////////////////////////////////////////
+    let targetDate = hadleDTtargetTime(targetTime)
 
-    addCounter("dateTimeCounterOutput", getDateTimeCounter, targetTime);
+    let currentDate = new Date();
+
+    document.getElementById("timer").innerHTML = showTimerBlock("dateTime", currentDate, targetDate);
+    addCounter("dateTimeCounterOutput", currentDate, getDateTimeCounter, targetDate);
+
+}
+
+function handleAmountTargetTime(currentDate, inputTime) {
+
+    let timeSplit = inputTime.split(":");
+
+    let newDate = new Date(currentDate.toString());
+
+    let newSeconds = parseInt(newDate.getSeconds()) + parseInt(timeSplit[2]);
+    newDate.setSeconds(newSeconds);
+
+    let newMinutes = parseInt(newDate.getMinutes()) + parseInt(timeSplit[1]);
+    newDate.setMinutes(newMinutes);
+
+    let newHours = parseInt(newDate.getHours()) + parseInt(timeSplit[0]);
+    newDate.setHours(newHours);
+
+    return newDate;
+
 }
 
 function showAmountTimer() {
-    document.getElementById("timer").innerHTML = showTimerBlock("amount");
 
-    let targetTime = document.getElementById("inputAmount").value;
-    ///////////////////////////////////////////
-    console.log(targetTime);                          ///////////////////////////////////////////
-    ///////////////////////////////////////////
+    stopCountdown();
 
-    addCounter("amountCounterOutput", getAmountCounter, targetTime);
-}
+    let inputTime = document.getElementById("inputAmount").value;
 
-function startCountdown() {
-/////////////////////////////////////////////////////////
+    let currentDate = new Date();
+
+    let targetDate = handleAmountTargetTime(currentDate, inputTime)
+
+    document.getElementById("timer").innerHTML = showTimerBlock("amount", currentDate, targetDate);
+    addCounter("amountCounterOutput", currentDate, getAmountCounter, targetDate);
 }
 
 function stopCountdown() {
-    clearInterval(interval);
+    if (interval !== null) {
+        clearInterval(interval);
+    }
 }
 
-function resetCountdown() {
-/////////////////////////////////////////////////////////
+function startAmountCountdown() {
+    showAmountTimer()
+}
+
+function resetAmountCountdown() {
+    showAmountTimer()
 }
